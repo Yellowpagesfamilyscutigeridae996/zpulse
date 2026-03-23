@@ -9,8 +9,14 @@ Every time I looked for a way to keep tabs on disk health across all the nodes i
 Nothing out there was built for this. Everything either does way too much or only monitors the local machine. So I wrote ZPulse. It is purpose-built for home racks: lightweight agents that stream disk and ZFS telemetry over a single WebSocket connection to one central dashboard. No metric pipelines, no config files longer than the code itself, no containers, no databases. Just a Python agent on each node and a dashboard on whatever box you have lying around.
 
 ## Preview
+###### Overview
 ![](./.screens/preview.png)
+
+###### Individual Node Monitoring
 ![](./.screens/preview2.png)
+
+###### SMART Metadata parsing
+![](./.screens/preview3.png)
 
 ## Architecture
 
