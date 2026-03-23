@@ -1,0 +1,5 @@
+# ZPulse - Developed by acidvegas in Python (https://github.com/acidvegas/rackwatch)
+# zpulse/dashboard/requirements.txt
+
+aiohttp
+apv

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZPulse</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%233b82f6'/><text x='16' y='23' text-anchor='middle' fill='white' font-size='20' font-weight='bold' font-family='sans-serif'>Z</text></svg>">
+<style>
+:root{--bg:#06090f;--surface:#0d1420;--surface2:#131c2e;--surface3:#192436;--border:#1e2d44;--text:#d4dae6;--text2:#7a879e;--accent:#3b82f6;--accent2:#2563eb;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--orange:#f97316;--cyan:#06b6d4;--purple:#a855f7;--radius:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--mono:'SF Mono','Cascadia Code','Fira Code',monospace}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scrollbar-color:var(--surface3) var(--bg)}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+a{color:var(--accent);text-decoration:none}
+nav{position:sticky;top:0;z-index:100;background:rgba(13,20,32,.85);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;height:46px;gap:1rem;backdrop-filter:blur(16px)}
+nav .logo{font-weight:700;font-size:.95rem;color:var(--accent);white-space:nowrap}
+nav .conn{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;transition:background .3s}
+nav .nav-links{display:flex;gap:.1rem;margin-left:auto}
+nav .nav-links a{padding:.3rem .55rem;border-radius:6px;font-size:.75rem;color:var(--text2);transition:all .15s}
+nav .nav-links a:hover{color:var(--text);background:var(--surface2)}
+.btn{padding:.35rem .8rem;border-radius:6px;font-size:.75rem;background:var(--accent);color:#fff;border:none;cursor:pointer;font-family:var(--font);transition:background .15s}
+.btn:hover{background:var(--accent2)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:transparent}
+.btn-sm{padding:.22rem .55rem;font-size:.7rem}
+.server-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:.75rem;padding:.25rem .5rem;outline:none;cursor:pointer;max-width:160px}
+.server-select:focus{border-color:var(--accent)}
+main{max-width:1440px;margin:0 auto;padding:1rem 1.5rem}
+section{margin-bottom:1.5rem}
+.section-title{font-size:.9rem;font-weight:600;margin-bottom:.65rem;padding-bottom:.35rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem}
+.section-title .badge{font-size:.62rem;padding:.1rem .4rem;border-radius:99px;font-weight:500}
+.section-sub{font-size:.72rem;color:var(--text2);margin-top:-.35rem;margin-bottom:.65rem}
+.grid{display:grid;gap:.65rem}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem}
+.card-label{font-size:.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem}
+.card-value{font-size:1.4rem;font-weight:700;font-family:var(--mono);letter-spacing:-.03em}
+.card-sub{font-size:.7rem;color:var(--text2);margin-top:.1rem}
+.stat-bar{height:4px;border-radius:2px;background:var(--surface3);margin-top:.35rem;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:2px;transition:width .5s}
+.fleet-card{cursor:pointer;transition:border-color .2s,transform .15s}
+.fleet-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.fleet-card.offline{opacity:.6}
+.pool-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem}
+.pool-name{font-size:.95rem;font-weight:600;font-family:var(--mono)}
+.hb{font-size:.65rem;padding:.12rem .45rem;border-radius:99px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.h-on{background:rgba(34,197,94,.12);color:var(--green)}.h-deg{background:rgba(234,179,8,.12);color:var(--yellow)}.h-flt{background:rgba(239,68,68,.12);color:var(--red)}.h-unk{background:rgba(122,135,158,.12);color:var(--text2)}
+.pool-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:.4rem;margin-bottom:.6rem}
+.ps-l{font-size:.6rem;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}.ps-v{font-size:.85rem;font-weight:600;font-family:var(--mono)}
+.vdev-tree{font-family:var(--mono);font-size:.72rem;margin-top:.4rem}
+.vr{display:grid;grid-template-columns:1fr 68px 48px 48px 48px;padding:.2rem .35rem;border-radius:3px;align-items:center}
+.vr:nth-child(even){background:var(--surface2)}.vr.vh{color:var(--text2);font-weight:600;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em}
+.vr .zero{color:var(--surface3)}.vr .err{color:var(--red);font-weight:600}
+.chart-container{position:relative;height:195px;width:100%}
+.chart-unavail{display:flex;align-items:center;justify-content:center;height:195px;color:var(--text2);font-size:.8rem}
+.disk-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem}
+.disk-name{font-size:.95rem;font-weight:600;font-family:var(--mono)}
+.dtb{font-size:.62rem;padding:.1rem .4rem;border-radius:99px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;background:rgba(59,130,246,.12);color:var(--accent)}
+.dtb-sas{background:rgba(168,85,247,.12);color:var(--purple)}.dtb-nv{background:rgba(6,182,212,.12);color:var(--cyan)}
+.disk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin-bottom:.5rem}
+.ds{padding:.35rem .45rem;background:var(--surface2);border-radius:6px}
+.ds-l{font-size:.58rem;color:var(--text2);text-transform:uppercase}.ds-v{font-size:.8rem;font-weight:600;font-family:var(--mono)}
+.score-badge{font-size:.65rem;padding:.12rem .4rem;border-radius:99px;font-weight:700;font-family:var(--mono)}
+.tbl{width:100%;font-size:.75rem;border-collapse:collapse;table-layout:fixed}
+.tbl th{text-align:left;padding:.35rem .5rem;color:var(--text2);border-bottom:1px solid var(--border);font-weight:600;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden}
+.tbl td{padding:.3rem .5rem;border-bottom:1px solid var(--surface3);font-family:var(--mono);font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbl tr:hover td{background:var(--surface2)}.tbl th.r,.tbl td.r{text-align:right}
+.tbl th.sort{cursor:pointer;user-select:none}.tbl th.sort:hover{color:var(--text)}
+.io-t th:nth-child(1){width:8%}.io-t th:nth-child(2),.io-t th:nth-child(3){width:12%}.io-t th:nth-child(4),.io-t th:nth-child(5){width:10%}.io-t th:nth-child(6),.io-t th:nth-child(7){width:9%}.io-t th:nth-child(8){width:8%}.io-t th:nth-child(9){width:12%}
+.alert-list{display:flex;flex-direction:column;gap:.35rem}
+.alert-item{display:flex;align-items:center;gap:.5rem;padding:.4rem .65rem;border-radius:6px;font-size:.75rem;border-left:3px solid}
+.alert-warning{background:rgba(234,179,8,.06);border-color:var(--yellow)}.alert-critical{background:rgba(239,68,68,.06);border-color:var(--red)}.alert-info{background:rgba(59,130,246,.06);border-color:var(--accent)}
+.alert-time{font-size:.65rem;color:var(--text2);font-family:var(--mono);white-space:nowrap}
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;width:90%;max-width:520px;max-height:85vh;overflow-y:auto}
+.modal h2{font-size:1rem;margin-bottom:1rem}
+.modal label{display:block;font-size:.72rem;color:var(--text2);margin-bottom:.2rem;margin-top:.75rem}.modal label:first-of-type{margin-top:0}
+.modal input{width:100%;padding:.45rem .65rem;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.8rem;outline:none}.modal input:focus{border-color:var(--accent)}
+.modal .toggle-row{display:flex;align-items:center;justify-content:space-between;margin-top:.75rem}.modal .toggle-row label{margin:0}
+.toggle{position:relative;width:36px;height:19px;cursor:pointer}.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;inset:0;border-radius:10px;background:var(--surface3);transition:background .2s}
+.toggle .slider::before{content:'';position:absolute;width:13px;height:13px;border-radius:50%;left:3px;top:3px;background:var(--text2);transition:all .2s}
+.toggle input:checked+.slider{background:var(--accent)}.toggle input:checked+.slider::before{transform:translateX(17px);background:#fff}
+.modal-actions{display:flex;gap:.5rem;margin-top:1rem}.modal-actions .btn{flex:1;text-align:center}
+.smart-modal{max-width:820px}.smart-modal h2{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.si-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:.35rem;margin-bottom:.85rem}
+.si-item{padding:.35rem .5rem;background:var(--surface2);border-radius:6px}
+.si-l{font-size:.58rem;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}.si-v{font-size:.8rem;font-weight:600;font-family:var(--mono)}
+.st{width:100%;font-size:.7rem;font-family:var(--mono);border-collapse:collapse}
+.st th{text-align:left;padding:.3rem .4rem;color:var(--text2);border-bottom:1px solid var(--border);font-weight:600;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;background:var(--surface)}
+.st td{padding:.25rem .4rem;border-bottom:1px solid var(--surface3)}.st tr:hover td{background:var(--surface2)}
+.st .attr-warn{color:var(--yellow)}.st .attr-crit{color:var(--red);font-weight:600}.st .attr-note{color:var(--text2);font-style:italic;font-size:.62rem}
+.empty{text-align:center;padding:1.25rem;color:var(--text2);font-size:.82rem}
+.tc{color:var(--green)}.tw{color:var(--yellow)}.th{color:var(--red)}
+@media(max-width:1024px){.g4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}.pool-stats{grid-template-columns:repeat(3,1fr)}.disk-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){nav .nav-links{display:none}main{padding:.75rem}.g4,.g3{grid-template-columns:1fr 1fr}.smart-modal{max-width:98%;padding:1rem}}
+</style>
+</head>
+<body>
+<nav>
+<div class="logo">ZPulse</div>
+<select class="server-select" id="server-select" onchange="switchServer(this.value)">
+    <option value="">Fleet Overview</option>
+</select>
+<div class="conn" id="conn-dot" title="Disconnected"></div>
+<div class="nav-links" id="detail-nav" style="display:none">
+    <a href="#overview">Overview</a><a href="#pools">Pools</a><a href="#io">I/O</a><a href="#arc">ARC</a><a href="#temps">Temp</a><a href="#disks-section">Disks</a><a href="#datasets">Datasets</a><a href="#alerts-section">Alerts</a>
+</div>
+<button class="btn btn-ghost btn-sm" onclick="openSettings()">Settings</button>
+</nav>
+<main>
+<!-- Fleet Overview -->
+<section id="fleet">
+    <div class="section-title">Server Fleet <span class="badge h-on" id="fleet-count">0</span></div>
+    <div class="grid g3" id="fleet-cards"><div class="empty">Waiting for agents to connect...</div></div>
+</section>
+
+<!-- Per-server detail (hidden until a server is selected) -->
+<div id="server-detail" style="display:none">
+<section id="overview">
+    <div class="grid g4" id="overview-cards"><div class="card"><div class="card-label">Loading...</div></div></div>
+    <div class="grid g4" id="system-cards" style="margin-top:.65rem"></div>
+</section>
+<section id="pools"><div class="section-title">ZFS Pools <span class="badge h-on" id="pool-count-badge"></span></div><div id="pool-cards"></div></section>
+<section id="io">
+    <div class="section-title">I/O Performance</div>
+    <div class="grid g4" id="io-summary-cards"></div>
+    <div class="grid g2" style="margin-top:.65rem">
+        <div class="card"><div class="card-label">Throughput</div><div class="chart-container"><canvas id="chart-throughput"></canvas></div></div>
+        <div class="card"><div class="card-label">IOPS</div><div class="chart-container"><canvas id="chart-iops"></canvas></div></div>
+    </div>
+    <div class="card" style="margin-top:.65rem;overflow-x:auto">
+        <table class="tbl io-t"><thead><tr><th>Disk</th><th class="r">Read</th><th class="r">Write</th><th class="r">R IOPS</th><th class="r">W IOPS</th><th class="r">R Lat</th><th class="r">W Lat</th><th class="r">Busy</th><th>Pool</th></tr></thead><tbody id="io-disk-tbody"></tbody></table>
+    </div>
+</section>
+<section id="arc">
+    <div class="section-title">ARC Cache</div>
+    <div class="section-sub">Adaptive Replacement Cache — ZFS uses free RAM as a read cache. Hit rate shown is instantaneous (per sample interval).</div>
+    <div class="grid g4" id="arc-cards"></div>
+    <div class="grid g2" style="margin-top:.65rem">
+        <div class="card"><div class="card-label">Hit Rate</div><div class="chart-container"><canvas id="chart-arc-hitrate"></canvas></div></div>
+        <div class="card"><div class="card-label">ARC Size</div><div class="chart-container"><canvas id="chart-arc-size"></canvas></div></div>
+    </div>
+</section>
+<section id="temps">
+    <div class="section-title">Disk Temperatures</div>
+    <div class="card"><div class="chart-container" style="height:200px"><canvas id="chart-temps"></canvas></div></div>
+</section>
+<section id="disks-section"><div class="section-title">Physical Disks <span class="badge h-on" id="disk-count-badge"></span></div><div class="grid g2" id="disk-cards"></div></section>
+<section id="datasets">
+    <div class="section-title">ZFS Datasets</div>
+    <div class="card" style="overflow-x:auto"><table class="tbl" id="ds-table"><thead><tr><th class="sort" data-sort="name">Name</th><th class="sort r" data-sort="used">Used</th><th class="sort r" data-sort="available">Avail</th><th class="sort r" data-sort="referenced">Refer</th><th class="sort" data-sort="compression">Comp</th><th class="sort r" data-sort="compressratio">Ratio</th><th class="sort" data-sort="mountpoint">Mount</th></tr></thead><tbody id="ds-tbody"></tbody></table></div>
+</section>
+<section id="snapshots">
+    <div class="section-title">Snapshots <span class="badge h-on" id="snap-count-badge">0</span></div>
+    <div class="card" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Name</th><th class="r">Used</th><th class="r">Referenced</th><th>Created</th></tr></thead><tbody id="snap-tbody"></tbody></table></div>
+</section>
+<section id="alerts-section">
+    <div class="section-title">Alerts</div>
+    <div id="alert-active" class="alert-list" style="margin-bottom:.65rem"></div>
+    <div class="card"><div class="card-label">Log</div><div id="alert-log" class="alert-list" style="margin-top:.4rem"></div></div>
+</section>
+</div><!-- /server-detail -->
+</main>
+<div class="modal-overlay" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+<div class="modal"><h2>Settings</h2>
+<label>Gotify Server URL</label><input type="url" id="set-gotify-url" placeholder="https://gotify.example.com">
+<label>Gotify App Token</label><input type="text" id="set-gotify-token" placeholder="AbCdEf123456">
+<label>Temp Warning (°C)</label><input type="number" id="set-temp-warn" min="20" max="80">
+<label>Temp Critical (°C)</label><input type="number" id="set-temp-crit" min="30" max="90">
+<label>Space Warning (%)</label><input type="number" id="set-space-warn" min="50" max="99">
+<label>Space Critical (%)</label><input type="number" id="set-space-crit" min="60" max="99">
+<label>Alert Cooldown (s)</label><input type="number" id="set-cooldown" min="60" max="86400">
+<div class="toggle-row"><label>SMART Alerts</label><label class="toggle"><input type="checkbox" id="set-smart-alerts"><span class="slider"></span></label></div>
+<div class="toggle-row"><label>Pool Alerts</label><label class="toggle"><input type="checkbox" id="set-pool-alerts"><span class="slider"></span></label></div>
+<div class="modal-actions"><button class="btn btn-ghost" onclick="closeSettings()">Cancel</button><button class="btn btn-ghost" onclick="testNotification()">Test</button><button class="btn" onclick="saveSettings()">Save</button></div>
+</div></div>
+<div class="modal-overlay" id="smart-modal" onclick="if(event.target===this)closeSmartModal()">
+<div class="modal smart-modal"><div id="smart-modal-content"></div><div class="modal-actions" style="margin-top:.65rem"><button class="btn btn-ghost" onclick="closeSmartModal()" style="flex:0 0 auto">Close</button></div></div>
+</div>
+<script src="/static/chart.min.js"></script>
+<script>
+const B=n=>{if(n==null||isNaN(n))return'—';const u=['B','KiB','MiB','GiB','TiB','PiB'];let i=0,v=Math.abs(n);while(v>=1024&&i<u.length-1){v/=1024;i++}return v.toFixed(i>0?2:0)+' '+u[i]};
+const Bps=n=>{if(n==null||isNaN(n))return'—';const u=['B/s','KiB/s','MiB/s','GiB/s'];let i=0,v=Math.abs(n);while(v>=1024&&i<u.length-1){v/=1024;i++}return v.toFixed(2)+' '+u[i]};
+const pct=v=>v!=null?v.toFixed(1)+'%':'—';
+const hc=h=>{if(!h)return'h-unk';const s=String(h).toUpperCase();return s==='ONLINE'?'h-on':s==='DEGRADED'?'h-deg':s==='FAULTED'?'h-flt':'h-unk'};
+const tc=t=>t==null?'':t<40?'tc':t<50?'tw':'th';
+const fmtH=h=>{if(h==null)return'—';const y=Math.floor(h/8766),d=Math.floor((h%8766)/24);let s=h.toLocaleString()+'h';if(y>0)s+=` (${y}y ${d}d)`;else if(d>0)s+=` (${d}d)`;return s};
+const fmtLat=ms=>ms>0?ms.toFixed(1)+'ms':'—';
+const latCol=ms=>ms>50?'var(--red)':ms>20?'var(--yellow)':ms>0?'var(--text)':'var(--text2)';
+const busyCol=p=>p>80?'var(--red)':p>40?'var(--yellow)':p>5?'var(--text)':'var(--text2)';
+const scoreCol=s=>s>=80?'var(--green)':s>=50?'var(--yellow)':'var(--red)';
+const scoreBg=s=>s>=80?'rgba(34,197,94,.12)':s>=50?'rgba(234,179,8,.12)':'rgba(239,68,68,.12)';
+const relTime=ts=>{const s=Math.floor(Date.now()/1000-ts);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'};
+const fmtUptime=sec=>{if(!sec)return'';const d=Math.floor(sec/86400),h=Math.floor((sec%86400)/3600);return d>0?d+'d '+h+'h':h+'h '+Math.floor((sec%3600)/60)+'m'};
+const SEAGATE=new Set([1,7,195]);
+const DISK_COLORS=['#3b82f6','#f97316','#22c55e','#a855f7','#06b6d4','#ef4444','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#84cc16'];
+
+let ws=null, selectedServer=null, servers=[], settingsData={};
+const state={disks:[],pools:[],datasets:[],snapshots:[],ioRates:{},poolMap:{},arc:null,alertsActive:[],alertLog:[]};
+const charts={};
+let chartsReady=false;
+
+const POLL_IO=3000,CHART_WINDOW=3*60*1000;
+
+/* ── Charts ──────────────────────────────────────────────────────────── */
+
+const CHART_OPTS=()=>({responsive:true,maintainAspectRatio:false,
+    animation:{duration:POLL_IO,easing:'linear'},animations:{y:{duration:0}},
+    interaction:{mode:'nearest',axis:'x',intersect:false},
+    plugins:{legend:{display:true,position:'top',labels:{color:'#7a879e',boxWidth:10,boxHeight:2,font:{size:10}}},tooltip:{backgroundColor:'#131c2e',borderColor:'#1e2d44',borderWidth:1,titleColor:'#d4dae6',bodyColor:'#d4dae6',bodyFont:{family:"'SF Mono',monospace",size:10}}},
+    scales:{x:{type:'linear',ticks:{callback:v=>new Date(v).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}),maxTicksLimit:6,color:'#7a879e',font:{size:9}},grid:{color:'#1e2d4418'}},y:{ticks:{color:'#7a879e',font:{size:9},maxTicksLimit:6},grid:{color:'#1e2d4418'},beginAtZero:true}}});
+
+function mkChart(id,l1,l2,c1,c2){const ctx=document.getElementById(id);if(!ctx)return null;return new Chart(ctx,{type:'line',data:{datasets:[{label:l1,data:[],borderColor:c1,backgroundColor:c1+'15',borderWidth:1.5,pointRadius:0,fill:true,tension:.35},{label:l2,data:[],borderColor:c2,backgroundColor:c2+'15',borderWidth:1.5,pointRadius:0,fill:true,tension:.35}]},options:CHART_OPTS()})}
+
+function initCharts(){
+    if(typeof Chart==='undefined'){document.querySelectorAll('.chart-container').forEach(el=>{el.innerHTML='<div class="chart-unavail">Chart library unavailable</div>'});return}
+    try{
+        charts.tp=mkChart('chart-throughput','Read','Write','#3b82f6','#f97316');
+        charts.iops=mkChart('chart-iops','Read','Write','#06b6d4','#a855f7');
+        charts.arcH=mkChart('chart-arc-hitrate','Hits %','Misses %','#22c55e','#ef4444');
+        charts.arcS=mkChart('chart-arc-size','Size','Target','#3b82f6','#7a879e');
+        if(charts.tp){charts.tp.options.scales.y.ticks.callback=Bps;charts.tp.options.plugins.tooltip.callbacks={label:c=>c.dataset.label+': '+Bps(c.parsed.y)}}
+        if(charts.arcH){charts.arcH.options.scales.y.max=100;charts.arcH.options.scales.y.min=0}
+        if(charts.arcS){charts.arcS.options.scales.y.ticks.callback=B;charts.arcS.options.plugins.tooltip.callbacks={label:c=>c.dataset.label+': '+B(c.parsed.y)}}
+        chartsReady=true;
+    }catch(e){console.error('Chart init:',e)}
+}
+function destroyCharts(){for(const k of Object.keys(charts)){if(charts[k]){charts[k].destroy();delete charts[k]}}chartsReady=false}
+
+function initTempChart(names){
+    if(typeof Chart==='undefined'||charts.temps)return;
+    const ctx=document.getElementById('chart-temps');if(!ctx)return;
+    const opts=CHART_OPTS();opts.scales.y.ticks.callback=v=>v+'°C';opts.plugins.tooltip.callbacks={label:c=>c.dataset.label+': '+c.parsed.y+'°C'};
+    charts.temps=new Chart(ctx,{type:'line',data:{datasets:names.map((n,i)=>({label:n,data:[],borderColor:DISK_COLORS[i%DISK_COLORS.length],borderWidth:1.5,pointRadius:0,tension:.35,fill:false}))},options:opts});
+}
+
+function pushCh(ch,ts,vals){if(!ch)return;vals.forEach((v,i)=>ch.data.datasets[i].data.push({x:ts,y:v}));ch.options.scales.x.min=ts-CHART_WINDOW;ch.options.scales.x.max=ts;const c=ts-CHART_WINDOW*2;ch.data.datasets.forEach(ds=>{while(ds.data.length>0&&ds.data[0].x<c)ds.data.shift()});ch.update()}
+function bulkCh(ch,ts,vs){if(!ch||!ts.length)return;ch.data.datasets.forEach((ds,i)=>{ds.data=ts.map((t,j)=>({x:t*1000,y:vs[i][j]||0}))});const l=ts[ts.length-1]*1000;ch.options.scales.x.min=l-CHART_WINDOW;ch.options.scales.x.max=l;ch.update('none')}
+
+function loadHist(h){
+    if(!chartsReady||!h||!h.timestamps||!h.timestamps.length)return;
+    const ts=h.timestamps,len=ts.length;
+    if(charts.tp){let r=new Array(len).fill(0),w=new Array(len).fill(0);for(const d of Object.values(h.io||{})){if(d.read_bps)d.read_bps.forEach((v,i)=>r[i]+=v||0);if(d.write_bps)d.write_bps.forEach((v,i)=>w[i]+=v||0)}bulkCh(charts.tp,ts,[r,w])}
+    if(charts.iops){let r=new Array(len).fill(0),w=new Array(len).fill(0);for(const d of Object.values(h.io||{})){if(d.read_iops)d.read_iops.forEach((v,i)=>r[i]+=v||0);if(d.write_iops)d.write_iops.forEach((v,i)=>w[i]+=v||0)}bulkCh(charts.iops,ts,[r,w])}
+    if(charts.arcH&&h.arc_hit_rate&&h.arc_hit_rate.length)bulkCh(charts.arcH,ts,[h.arc_hit_rate,h.arc_hit_rate.map(v=>v!=null?+(100-v).toFixed(2):0)]);
+    if(charts.arcS&&h.arc_size&&h.arc_size.length)bulkCh(charts.arcS,ts,[h.arc_size,h.arc_size]);
+    if(h.temps&&Object.keys(h.temps).length){
+        const dn=Object.keys(h.temps).sort();if(!charts.temps)initTempChart(dn);
+        if(charts.temps){charts.temps.data.datasets.forEach(ds=>{const v=h.temps[ds.label]||[];const off=len-v.length;ds.data=v.map((val,j)=>({x:ts[off+j]*1000,y:val}))});if(ts.length){const l=ts[ts.length-1]*1000;charts.temps.options.scales.x.min=l-CHART_WINDOW;charts.temps.options.scales.x.max=l}charts.temps.update('none')}
+    }
+}
+
+function appendIO(rates,ts){if(!chartsReady||!rates)return;const t=ts*1000;let r=0,w=0,ri=0,wi=0;for(const d of Object.values(rates)){r+=d.read_bps||0;w+=d.write_bps||0;ri+=d.read_iops||0;wi+=d.write_iops||0}pushCh(charts.tp,t,[r,w]);pushCh(charts.iops,t,[ri,wi])}
+function appendArc(arc,ts){if(!chartsReady||!arc)return;const t=ts*1000;pushCh(charts.arcH,t,[arc.hit_rate,+(100-arc.hit_rate).toFixed(2)]);pushCh(charts.arcS,t,[arc.size,arc.target_size])}
+function appendTemps(temps,ts){
+    if(!temps||!Object.keys(temps).length)return;
+    if(!charts.temps)initTempChart(Object.keys(temps).sort());
+    if(!charts.temps)return;
+    const t=ts*1000;
+    charts.temps.data.datasets.forEach(ds=>{const v=temps[ds.label];if(v!=null)ds.data.push({x:t,y:v})});
+    charts.temps.options.scales.x.min=t-CHART_WINDOW;charts.temps.options.scales.x.max=t;
+    const c=t-CHART_WINDOW*2;charts.temps.data.datasets.forEach(ds=>{while(ds.data.length>0&&ds.data[0].x<c)ds.data.shift()});
+    charts.temps.update();
+}
+
+/* ── Fleet Rendering ─────────────────────────────────────────────────── */
+
+function renderFleet(){
+    const el=document.getElementById('fleet-cards'),badge=document.getElementById('fleet-count');
+    if(!servers||!servers.length){el.innerHTML='<div class="empty">Waiting for agents to connect...</div>';badge.textContent='0';return}
+    badge.textContent=servers.length;
+    el.innerHTML=servers.map(s=>{
+        const on=s.online,up=s.total_usable>0?(s.total_used/s.total_usable*100):0;
+        const bc=up>90?'var(--red)':up>75?'var(--yellow)':'var(--accent)';
+        const upStr=fmtUptime(s.uptime_seconds||0);
+        const ac=s.alert_count||0;
+        return`<div class="card fleet-card${on?'':' offline'}" onclick="document.getElementById('server-select').value='${s.hostname}';switchServer('${s.hostname}')">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+                <span style="font-weight:700;font-family:var(--mono);font-size:.95rem">${s.hostname}</span>
+                <span class="hb ${on?'h-on':'h-flt'}">${on?'ONLINE':'OFFLINE'}</span>
+            </div>
+            ${s.total_usable>0?`<div style="font-size:.8rem;margin-bottom:.3rem">${B(s.total_used)} / ${B(s.total_usable)}</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${up.toFixed(1)}%;background:${bc}"></div></div>`:'<div style="font-size:.8rem;color:var(--text2);margin-bottom:.3rem">No pool data</div>'}
+            <div style="font-size:.72rem;color:var(--text2);margin-top:.4rem">${s.disk_count} disk${s.disk_count!==1?'s':''} · ${s.pool_count} pool${s.pool_count!==1?'s':''} · <span style="color:${ac>0?'var(--red)':'var(--green)'}">${ac} alert${ac!==1?'s':''}</span></div>
+            ${s.cpu_model?`<div style="font-size:.65rem;color:var(--text2);margin-top:.2rem">${s.cpu_model.substring(0,45)}</div>`:''}
+            ${upStr?`<div style="font-size:.65rem;color:var(--text2)">Up ${upStr}</div>`:''}
+        </div>`}).join('');
+}
+
+function updateServerSelect(){
+    const sel=document.getElementById('server-select');
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Fleet Overview</option>'+servers.map(s=>`<option value="${s.hostname}"${s.hostname===cur?' selected':''}>${s.hostname}${s.online?'':' (offline)'}</option>`).join('');
+}
+
+/* ── Detail Renderers ────────────────────────────────────────────────── */
+
+function renderOverviewFromState(){
+    const disks=state.disks||[],pools=state.pools||[],alerts=state.alertsActive||[];
+    const s={total_raw:disks.reduce((a,d)=>a+(d.size||0),0),total_usable:pools.reduce((a,p)=>a+(p.size||0),0),total_used:pools.reduce((a,p)=>a+(p.allocated||0),0),total_free:pools.reduce((a,p)=>a+(p.free||0),0)};
+    const up=s.total_usable>0?(s.total_used/s.total_usable*100):0;
+    const bc=up>90?'var(--red)':up>75?'var(--yellow)':'var(--accent)';
+    document.getElementById('overview-cards').innerHTML=`
+        <div class="card"><div class="card-label">Raw Storage</div><div class="card-value">${B(s.total_raw)}</div><div class="card-sub">${disks.length} disk${disks.length!==1?'s':''}</div></div>
+        <div class="card"><div class="card-label">Used</div><div class="card-value">${B(s.total_used)}</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${up.toFixed(1)}%;background:${bc}"></div></div><div class="card-sub">${pct(up)} of ${B(s.total_usable)}</div></div>
+        <div class="card"><div class="card-label">Free</div><div class="card-value">${B(s.total_free)}</div><div class="card-sub">${pools.length} pool${pools.length!==1?'s':''}</div></div>
+        <div class="card"><div class="card-label">Health</div><div class="card-value" style="color:${alerts.length>0?'var(--red)':'var(--green)'}">${alerts.length>0?alerts.length+' Alert'+(alerts.length>1?'s':''):'All Clear'}</div><div class="card-sub">${disks.filter(d=>d.health!==false).length}/${disks.length} disks · ${pools.filter(p=>p.health==='ONLINE').length}/${pools.length} pools</div></div>`;
+}
+
+function renderSystem(si){
+    const el=document.getElementById('system-cards');if(!el||!si)return;
+    const up=si.uptime_seconds||0,upStr=fmtUptime(up);
+    const ramUsed=(si.ram_total||0)-(si.ram_available||0);
+    const ramPct=si.ram_total>0?(ramUsed/si.ram_total*100):0;
+    const ramCol=ramPct>90?'var(--red)':ramPct>75?'var(--yellow)':'var(--accent)';
+    el.innerHTML=`
+        <div class="card"><div class="card-label">Kernel</div><div class="card-value" style="font-size:.85rem">${si.kernel||'—'}</div></div>
+        <div class="card"><div class="card-label">ZFS Version</div><div class="card-value" style="font-size:.85rem">${si.zfs_version||'—'}</div></div>
+        <div class="card"><div class="card-label">Uptime</div><div class="card-value" style="font-size:.85rem">${upStr||'—'}</div></div>
+        <div class="card"><div class="card-label">RAM</div><div class="card-value" style="font-size:.85rem">${B(ramUsed)} / ${B(si.ram_total)}</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${ramPct.toFixed(1)}%;background:${ramCol}"></div></div><div class="card-sub">${si.cpu_count||0} cores · ${(si.cpu_model||'—').substring(0,40)}</div></div>`;
+}
+
+function renderPools(pools){
+    const el=document.getElementById('pool-cards'),badge=document.getElementById('pool-count-badge');
+    if(!pools||!pools.length){el.innerHTML='<div class="empty">No ZFS pools detected</div>';badge.textContent='0';return}
+    badge.textContent=pools.length;
+    el.innerHTML=pools.map(p=>{
+        const h=hc(p.health),up=p.size>0?(p.allocated/p.size*100):0,bc=up>90?'var(--red)':up>75?'var(--yellow)':'var(--accent)';
+        const scrubCol=p.scrub_age_days!=null?(p.scrub_age_days>14?'var(--red)':p.scrub_age_days>7?'var(--yellow)':'var(--green)'):'var(--text2)';
+        const scrubTxt=p.scrub_age_days!=null?p.scrub_age_days+'d ago':'N/A';
+        let vh='';
+        if(p.vdevs&&p.vdevs.length){vh=`<div class="vdev-tree"><div class="vr vh"><span>Name</span><span>State</span><span>Read</span><span>Write</span><span>Cksum</span></div>
+            ${p.vdevs.map(v=>{const pad='&nbsp;'.repeat(Math.max(0,v.indent-1)*2);const rc=v.read!=='0'&&v.read!=='-'?'err':'zero';const wc=v.write!=='0'&&v.write!=='-'?'err':'zero';const cc=v.cksum!=='0'&&v.cksum!=='-'?'err':'zero';return`<div class="vr"><span>${pad}${v.name}</span><span class="${hc(v.state)}" style="font-size:.7rem">${v.state}</span><span class="${rc}">${v.read}</span><span class="${wc}">${v.write}</span><span class="${cc}">${v.cksum}</span></div>`}).join('')}</div>`}
+        return`<div class="card" style="padding:1rem">
+            <div class="pool-header"><span class="pool-name">${p.name}</span><span class="hb ${h}">${p.health}</span></div>
+            <div class="stat-bar" style="margin-bottom:.5rem"><div class="stat-bar-fill" style="width:${up.toFixed(1)}%;background:${bc}"></div></div>
+            <div class="pool-stats">
+                <div><div class="ps-l">Size</div><div class="ps-v">${B(p.size)}</div></div>
+                <div><div class="ps-l">Used</div><div class="ps-v">${B(p.allocated)}</div></div>
+                <div><div class="ps-l">Free</div><div class="ps-v">${B(p.free)}</div></div>
+                <div><div class="ps-l">Frag</div><div class="ps-v">${p.fragmentation}%</div></div>
+                <div><div class="ps-l">Dedup</div><div class="ps-v">${p.dedup}x</div></div>
+                <div><div class="ps-l">Ashift</div><div class="ps-v">${p.ashift||'—'}</div></div>
+                <div><div class="ps-l">Scrub</div><div class="ps-v" style="color:${scrubCol}">${scrubTxt}</div></div>
+            </div>
+            ${p.scan?`<div style="font-size:.7rem;color:var(--text2);margin-bottom:.35rem">${p.scan}</div>`:''}
+            ${p.errors_summary?`<div style="font-size:.7rem;color:${p.errors_summary.includes('No known')?'var(--text2)':'var(--red)'}">${p.errors_summary}</div>`:''}
+            ${vh}</div>`}).join('');
+}
+
+function renderArc(arc){
+    const el=document.getElementById('arc-cards');
+    if(!arc){el.innerHTML='<div class="empty" style="grid-column:1/-1">ARC not available</div>';return}
+    el.innerHTML=`
+        <div class="card"><div class="card-label">Size</div><div class="card-value" style="font-size:1.2rem">${B(arc.size)}</div><div class="card-sub">Max ${B(arc.max_size)}</div></div>
+        <div class="card"><div class="card-label">Hit Rate</div><div class="card-value" style="font-size:1.2rem;color:${arc.hit_rate>90?'var(--green)':arc.hit_rate>70?'var(--yellow)':'var(--red)'}">${pct(arc.hit_rate)}</div><div class="card-sub">Lifetime: ${pct(arc.lifetime_hit_rate)}</div></div>
+        <div class="card"><div class="card-label">MRU / MFU</div><div class="card-value" style="font-size:.95rem">${B(arc.mru_size)}</div><div class="card-sub">MFU: ${B(arc.mfu_size)}</div></div>
+        <div class="card"><div class="card-label">L2ARC</div><div class="card-value" style="font-size:.95rem">${arc.l2_size>0?B(arc.l2_size):'N/A'}</div><div class="card-sub">${arc.l2_size>0?(arc.l2_hits||0).toLocaleString()+' hits':'None'}</div></div>`;
+}
+
+function renderDisks(disks){
+    const el=document.getElementById('disk-cards'),badge=document.getElementById('disk-count-badge');
+    if(!disks||!disks.length){el.innerHTML='<div class="empty">No disks detected</div>';badge.textContent='0';return}
+    badge.textContent=disks.length;
+    el.innerHTML=disks.map((d,i)=>{
+        const proto=(d.protocol||d.transport||'').toUpperCase();
+        let dtc='dtb';if(proto.includes('SAS')||proto.includes('SCSI'))dtc+=' dtb-sas';else if(proto.includes('NVME'))dtc+=' dtb-nv';
+        const ht=d.health===true?'PASSED':d.health===false?'FAILED':'N/A';
+        const hs=d.health_score!=null?d.health_score:'-';
+        return`<div class="card" style="padding:1rem">
+            <div class="disk-header"><div><span class="disk-name">/dev/${d.name}</span>${d.pool?`<span style="font-size:.65rem;color:var(--text2);margin-left:.35rem">${d.pool}</span>`:''}</div><div style="display:flex;gap:.25rem;align-items:center"><span class="score-badge" style="background:${scoreBg(hs)};color:${scoreCol(hs)}">${hs}</span><span class="${dtc}">${proto||'?'}</span><span class="hb ${d.health===true?'h-on':d.health===false?'h-flt':'h-unk'}">${ht}</span></div></div>
+            <div class="disk-stats">
+                <div class="ds"><div class="ds-l">Capacity</div><div class="ds-v">${B(d.user_capacity||d.size)}</div></div>
+                <div class="ds"><div class="ds-l">Temp</div><div class="ds-v ${tc(d.temperature)}">${d.temperature!=null?d.temperature+'°C':'—'}</div></div>
+                <div class="ds"><div class="ds-l">Power-On</div><div class="ds-v">${fmtH(d.power_on_hours)}</div></div>
+                <div class="ds"><div class="ds-l">RPM</div><div class="ds-v">${d.rotation_rate||'—'}</div></div>
+            </div>
+            <div style="font-size:.7rem;color:var(--text2);margin-bottom:.35rem"><strong>${d.device_model||d.model||'—'}</strong> · ${d.serial_number||d.serial||'—'} · FW ${d.firmware||'—'}</div>
+            <button class="btn btn-sm btn-ghost" onclick="openSmartModal(${i})">SMART Details</button></div>`}).join('');
+}
+
+function openSmartModal(idx){
+    const d=state.disks[idx];if(!d)return;
+    const proto=(d.protocol||d.transport||'').toUpperCase();
+    let dtc='dtb';if(proto.includes('SAS')||proto.includes('SCSI'))dtc+=' dtb-sas';else if(proto.includes('NVME'))dtc+=' dtb-nv';
+    const ht=d.health===true?'PASSED':d.health===false?'FAILED':'N/A';
+    const hs=d.health_score!=null?d.health_score:'-';
+    let smartHtml='';
+    if(d.smart_attributes&&d.smart_attributes.length){
+        smartHtml=`<div style="margin-top:.85rem"><div class="card-label" style="margin-bottom:.35rem">SMART Attributes</div>
+        <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"><table class="st"><thead><tr><th>ID</th><th>Attribute</th><th>Val</th><th>Wrst</th><th>Thr</th><th>Raw</th><th>Status</th></tr></thead><tbody>
+        ${d.smart_attributes.map(a=>{let c='',s='✓';if(a.when_failed){c='attr-crit';s='✗ FAIL'}else if(a.value>0&&a.threshold>0&&a.value<=a.threshold){c='attr-warn';s='⚠ LOW'}const r=typeof a.raw==='number'?a.raw.toLocaleString():a.raw;const sg=SEAGATE.has(a.id);return`<tr class="${c}"><td>${a.id}</td><td>${a.name}${sg?' <span class="attr-note">(vendor)</span>':''}</td><td>${a.value}</td><td>${a.worst}</td><td>${a.threshold}</td><td>${r}</td><td style="color:${c==='attr-crit'?'var(--red)':c==='attr-warn'?'var(--yellow)':'var(--green)'}">${s}</td></tr>`}).join('')}
+        </tbody></table></div></div>`;
+    }
+    let sasHtml='';
+    if(d.sas_error_counters){
+        sasHtml='<div style="margin-top:.85rem"><div class="card-label" style="margin-bottom:.35rem">SAS Errors</div><table class="st"><thead><tr><th>Type</th><th>Uncorrected</th><th>Corrected</th></tr></thead><tbody>';
+        for(const[t,v]of Object.entries(d.sas_error_counters)){const u=v.total_uncorrected_errors||0;sasHtml+=`<tr><td>${t}</td><td class="${u>0?'attr-crit':''}">${u.toLocaleString()}</td><td>${(v.total_errors_corrected||0).toLocaleString()}</td></tr>`}
+        sasHtml+='</tbody></table></div>';
+    }
+    if(d.grown_defect_count!=null)sasHtml+=`<div style="margin-top:.4rem;font-size:.75rem"><strong>Grown Defects:</strong> <span style="color:${d.grown_defect_count>0?'var(--red)':'var(--green)'};font-weight:600">${d.grown_defect_count}</span></div>`;
+    document.getElementById('smart-modal-content').innerHTML=`
+        <h2><span>/dev/${d.name}</span><span class="score-badge" style="background:${scoreBg(hs)};color:${scoreCol(hs)}">${hs}/100</span><span class="${dtc}">${proto}</span><span class="hb ${d.health===true?'h-on':d.health===false?'h-flt':'h-unk'}">${ht}</span></h2>
+        <div class="si-grid">
+            <div class="si-item"><div class="si-l">Model</div><div class="si-v">${d.device_model||d.model||'—'}</div></div>
+            <div class="si-item"><div class="si-l">Serial</div><div class="si-v">${d.serial_number||d.serial||'—'}</div></div>
+            <div class="si-item"><div class="si-l">Firmware</div><div class="si-v">${d.firmware||'—'}</div></div>
+            <div class="si-item"><div class="si-l">Capacity</div><div class="si-v">${B(d.user_capacity||d.size)}</div></div>
+            <div class="si-item"><div class="si-l">Temp</div><div class="si-v ${tc(d.temperature)}">${d.temperature!=null?d.temperature+'°C':'—'}</div></div>
+            <div class="si-item"><div class="si-l">Power-On</div><div class="si-v">${fmtH(d.power_on_hours)}</div></div>
+            <div class="si-item"><div class="si-l">RPM</div><div class="si-v">${d.rotation_rate||'—'}</div></div>
+            <div class="si-item"><div class="si-l">Form</div><div class="si-v">${d.form_factor||'—'}</div></div>
+            ${d.model_family?`<div class="si-item"><div class="si-l">Family</div><div class="si-v">${d.model_family}</div></div>`:''}
+            ${d.pool?`<div class="si-item"><div class="si-l">Pool</div><div class="si-v">${d.pool}</div></div>`:''}
+        </div>
+        ${smartHtml}${sasHtml}${!smartHtml&&!sasHtml?'<div class="empty">No SMART data</div>':''}
+        <div style="margin-top:.75rem;display:flex;gap:.4rem">
+            <button class="btn btn-sm btn-ghost" onclick="runSmartTest('/dev/${d.name}','short')">Short Self-Test</button>
+            <button class="btn btn-sm btn-ghost" onclick="runSmartTest('/dev/${d.name}','long')">Long Self-Test</button>
+        </div>`;
+    document.getElementById('smart-modal').classList.add('open');
+}
+function closeSmartModal(){document.getElementById('smart-modal').classList.remove('open')}
+
+function runSmartTest(device,type){
+    if(!confirm(`Run ${type} SMART self-test on ${device}?`))return;
+    if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'smarttest',hostname:selectedServer,device,test_type:type}))}else{alert('Not connected.')}
+}
+
+function renderIOStats(rates,pm){
+    let tR=0,tW=0,tRI=0,tWI=0,tRL=0,tWL=0,active=0;const rows=[];
+    for(const[n,d]of Object.entries(rates)){tR+=d.read_bps||0;tW+=d.write_bps||0;tRI+=d.read_iops||0;tWI+=d.write_iops||0;rows.push({name:n,...d,pool:pm[n]||''})}
+    rows.sort((a,b)=>a.name.localeCompare(b.name));
+    for(const r of rows){if((r.busy_pct||0)>1){tRL+=r.read_lat_ms||0;tWL+=r.write_lat_ms||0;active++}}
+    const avgLat=active>0?((tRL+tWL)/(active*2)):0;
+    const se=document.getElementById('io-summary-cards');
+    if(se)se.innerHTML=`
+        <div class="card"><div class="card-label">Read</div><div class="card-value" style="font-size:1.15rem;color:var(--accent)">${Bps(tR)}</div><div class="card-sub">${tRI.toFixed(1)} IOPS</div></div>
+        <div class="card"><div class="card-label">Write</div><div class="card-value" style="font-size:1.15rem;color:var(--orange)">${Bps(tW)}</div><div class="card-sub">${tWI.toFixed(1)} IOPS</div></div>
+        <div class="card"><div class="card-label">Combined</div><div class="card-value" style="font-size:1.15rem">${Bps(tR+tW)}</div><div class="card-sub">${(tRI+tWI).toFixed(1)} IOPS</div></div>
+        <div class="card"><div class="card-label">Active</div><div class="card-value" style="font-size:1.15rem">${active}/${rows.length}</div><div class="card-sub">${avgLat>0?'Avg lat '+avgLat.toFixed(1)+'ms':'Idle'}</div></div>`;
+    const tb=document.getElementById('io-disk-tbody');
+    if(tb)tb.innerHTML=rows.map(r=>`<tr><td>${r.name}</td><td class="r">${Bps(r.read_bps)}</td><td class="r">${Bps(r.write_bps)}</td><td class="r">${(r.read_iops||0).toFixed(1)}</td><td class="r">${(r.write_iops||0).toFixed(1)}</td><td class="r" style="color:${latCol(r.read_lat_ms||0)}">${fmtLat(r.read_lat_ms||0)}</td><td class="r" style="color:${latCol(r.write_lat_ms||0)}">${fmtLat(r.write_lat_ms||0)}</td><td class="r" style="color:${busyCol(r.busy_pct||0)}">${(r.busy_pct||0).toFixed(1)}%</td><td>${r.pool||'—'}</td></tr>`).join('');
+}
+
+let dsSortCol='name',dsSortAsc=true;
+function renderDatasets(ds){
+    const el=document.getElementById('ds-tbody');if(!ds||!ds.length){el.innerHTML='<tr><td colspan="7" class="empty">No datasets</td></tr>';return}
+    const s=[...ds].sort((a,b)=>{let va=a[dsSortCol],vb=b[dsSortCol];if(typeof va==='string')return dsSortAsc?va.localeCompare(vb):vb.localeCompare(va);return dsSortAsc?(va||0)-(vb||0):(vb||0)-(va||0)});
+    el.innerHTML=s.map(d=>`<tr><td>${d.name}</td><td class="r">${B(d.used)}</td><td class="r">${B(d.available)}</td><td class="r">${B(d.referenced)}</td><td>${d.compression}</td><td class="r">${d.compressratio}</td><td>${d.mountpoint||'—'}</td></tr>`).join('');
+    updateSortUI();
+}
+function updateSortUI(){document.querySelectorAll('#ds-table th.sort').forEach(th=>{const base=th.textContent.replace(/\s*[▲▼]$/,'');th.textContent=th.dataset.sort===dsSortCol?base+(dsSortAsc?' ▲':' ▼'):base})}
+document.querySelectorAll('#ds-table th.sort[data-sort]').forEach(th=>{th.addEventListener('click',()=>{const c=th.dataset.sort;if(dsSortCol===c)dsSortAsc=!dsSortAsc;else{dsSortCol=c;dsSortAsc=true}renderDatasets(state.datasets)})});
+
+function renderSnapshots(snaps){
+    const el=document.getElementById('snap-tbody'),badge=document.getElementById('snap-count-badge');
+    if(!snaps||!snaps.length){el.innerHTML='<tr><td colspan="4" class="empty">No snapshots</td></tr>';badge.textContent='0';return}
+    badge.textContent=snaps.length;
+    el.innerHTML=snaps.map(s=>{let cr=s.creation;if(typeof cr==='number')cr=new Date(cr*1000).toLocaleString();return`<tr><td>${s.name}</td><td class="r">${B(s.used)}</td><td class="r">${B(s.referenced)}</td><td>${cr}</td></tr>`}).join('');
+}
+
+function renderAlerts(data){
+    if(!data)return;
+    state.alertsActive=data.active||[];
+    state.alertLog=data.log||[];
+    document.getElementById('alert-active').innerHTML=state.alertsActive.length?state.alertsActive.map(a=>`<div class="alert-item alert-${a.severity}"><span>${a.message}</span></div>`).join(''):'<div style="font-size:.8rem;color:var(--text2);padding:.35rem">No active alerts</div>';
+    document.getElementById('alert-log').innerHTML=state.alertLog.length?state.alertLog.slice(0,40).map(a=>`<div class="alert-item alert-${a.severity}"><span class="alert-time">${relTime(a.timestamp)}</span><span>${a.message}</span></div>`).join(''):'<div style="font-size:.8rem;color:var(--text2);padding:.35rem">No alerts logged</div>';
+}
+
+/* ── WebSocket ───────────────────────────────────────────────────────── */
+
+function connectWS(){
+    const proto=location.protocol==='https:'?'wss:':'ws:';
+    ws=new WebSocket(`${proto}//${location.host}/ws`);
+    ws.onopen=()=>{
+        document.getElementById('conn-dot').style.background='var(--green)';
+        document.getElementById('conn-dot').title='Connected';
+        if(selectedServer)ws.send(JSON.stringify({type:'subscribe',hostname:selectedServer}));
+    };
+    ws.onclose=()=>{
+        document.getElementById('conn-dot').style.background='var(--red)';
+        document.getElementById('conn-dot').title='Disconnected';
+        setTimeout(connectWS,3000);
+    };
+    ws.onerror=()=>{};
+    ws.onmessage=e=>{
+        try{handleMessage(JSON.parse(e.data))}catch(err){console.error('WS parse:',err)}
+    };
+}
+
+function handleMessage(msg){
+    switch(msg.type){
+        case 'servers':
+            servers=msg.servers;
+            updateServerSelect();
+            if(!selectedServer)renderFleet();
+            break;
+        case 'settings':
+            settingsData=msg.settings||{};
+            break;
+        case 'full_state':
+            loadFullState(msg);
+            break;
+        case 'io':
+            if(msg.hostname===selectedServer){
+                state.ioRates=msg.rates||{};state.poolMap=msg.pool_map||{};
+                renderIOStats(msg.rates||{},msg.pool_map||{});
+                appendIO(msg.rates||{},msg.ts);
+                appendTemps(msg.temps||{},msg.ts);
+            }
+            break;
+        case 'arc':
+            if(msg.hostname===selectedServer){
+                state.arc=msg.arc;
+                renderArc(msg.arc);
+                appendArc(msg.arc,msg.ts);
+            }
+            break;
+        case 'pools':
+            if(msg.hostname===selectedServer){state.pools=msg.pools||[];renderPools(state.pools);renderOverviewFromState()}
+            break;
+        case 'disks':
+            if(msg.hostname===selectedServer){state.disks=msg.disks||[];renderDisks(state.disks);renderOverviewFromState()}
+            break;
+        case 'datasets':
+            if(msg.hostname===selectedServer){state.datasets=msg.datasets||[];renderDatasets(state.datasets)}
+            break;
+        case 'snapshots':
+            if(msg.hostname===selectedServer){state.snapshots=msg.snapshots||[];renderSnapshots(state.snapshots)}
+            break;
+        case 'system':
+            if(msg.hostname===selectedServer)renderSystem(msg.info||{});
+            break;
+        case 'alerts':
+            if(msg.hostname===selectedServer)renderAlerts({active:msg.active||[],log:msg.log||[]});
+            break;
+        case 'smarttest_result':
+            if(msg.hostname===selectedServer)alert(msg.success?`${msg.test_type} test started on ${msg.device}.`:`Failed: ${msg.output||'Unknown error'}`);
+            break;
+        case 'test_notification_result':
+            alert(msg.success?'Notification sent!':'Failed. Check URL & token.');
+            break;
+    }
+}
+
+function loadFullState(msg){
+    const c=msg.current||{},h=msg.history||{};
+    document.title='ZPulse — '+(msg.hostname||'');
+    if(c.pools&&c.pools.pools){state.pools=c.pools.pools;renderPools(state.pools)}
+    if(c.disks&&c.disks.disks){state.disks=c.disks.disks;renderDisks(state.disks)}
+    if(c.datasets&&c.datasets.datasets){state.datasets=c.datasets.datasets;renderDatasets(state.datasets)}
+    if(c.snapshots&&c.snapshots.snapshots){state.snapshots=c.snapshots.snapshots;renderSnapshots(state.snapshots)}
+    if(c.system&&c.system.info)renderSystem(c.system.info);
+    if(c.io&&c.io.rates){state.ioRates=c.io.rates;state.poolMap=c.io.pool_map||{};renderIOStats(c.io.rates,c.io.pool_map||{})}
+    if(c.arc&&c.arc.arc){state.arc=c.arc.arc;renderArc(c.arc.arc)}
+    renderOverviewFromState();
+    if(h&&h.timestamps&&h.timestamps.length)loadHist(h);
+    if(msg.alerts)renderAlerts(msg.alerts);
+}
+
+function switchServer(hostname){
+    selectedServer=hostname||null;
+    if(selectedServer){
+        document.getElementById('fleet').style.display='none';
+        document.getElementById('server-detail').style.display='';
+        document.getElementById('detail-nav').style.display='flex';
+        document.title='ZPulse — '+selectedServer;
+        state.disks=[];state.pools=[];state.datasets=[];state.snapshots=[];state.arc=null;state.alertsActive=[];state.alertLog=[];
+        destroyCharts();initCharts();
+        if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'subscribe',hostname:selectedServer}));
+    }else{
+        document.getElementById('fleet').style.display='';
+        document.getElementById('server-detail').style.display='none';
+        document.getElementById('detail-nav').style.display='none';
+        document.title='ZPulse — Fleet';
+        destroyCharts();
+        renderFleet();
+    }
+}
+
+/* ── Settings ────────────────────────────────────────────────────────── */
+
+function loadSettingsUI(){
+    const s=settingsData;
+    document.getElementById('set-gotify-url').value=s.gotify_url||'';
+    document.getElementById('set-gotify-token').value=s.gotify_token||'';
+    document.getElementById('set-temp-warn').value=s.alert_temp_warning||45;
+    document.getElementById('set-temp-crit').value=s.alert_temp_critical||55;
+    document.getElementById('set-space-warn').value=s.alert_space_warning||80;
+    document.getElementById('set-space-crit').value=s.alert_space_critical||90;
+    document.getElementById('set-cooldown').value=s.alert_cooldown||3600;
+    document.getElementById('set-smart-alerts').checked=s.alert_smart_enabled!==false;
+    document.getElementById('set-pool-alerts').checked=s.alert_pool_enabled!==false;
+}
+function openSettings(){loadSettingsUI();document.getElementById('settings-modal').classList.add('open')}
+function closeSettings(){document.getElementById('settings-modal').classList.remove('open')}
+function saveSettings(){
+    const b={gotify_url:document.getElementById('set-gotify-url').value.trim(),gotify_token:document.getElementById('set-gotify-token').value.trim(),alert_temp_warning:parseInt(document.getElementById('set-temp-warn').value)||45,alert_temp_critical:parseInt(document.getElementById('set-temp-crit').value)||55,alert_space_warning:parseInt(document.getElementById('set-space-warn').value)||80,alert_space_critical:parseInt(document.getElementById('set-space-crit').value)||90,alert_cooldown:parseInt(document.getElementById('set-cooldown').value)||3600,alert_smart_enabled:document.getElementById('set-smart-alerts').checked,alert_pool_enabled:document.getElementById('set-pool-alerts').checked};
+    if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'save_settings',settings:b}));
+    closeSettings();
+}
+function testNotification(){
+    saveSettings();
+    if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'test_notification'}));
+}
+
+/* ── Init ────────────────────────────────────────────────────────────── */
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSettings();closeSmartModal()}});
+connectWS();
+</script>
+</body>
+</html>

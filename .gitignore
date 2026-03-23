@@ -1,0 +1,4 @@
+# ZPulse - Developed by acidvegas in Python (https://github.com/acidvegas/rackwatch)
+# zpulse/.gitignore
+
+venv/
