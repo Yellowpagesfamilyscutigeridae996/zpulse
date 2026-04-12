@@ -1,5 +1,6 @@
 # ZPulse - Developed by acidvegas in Python (https://github.com/acidvegas/rackwatch)
 # zpulse/agent/requirements.txt
 
+aiohttp
 apv
 websockets
