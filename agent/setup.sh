@@ -17,7 +17,7 @@ SERVICE_NAME="zpulse-agent"
 DASHBOARD_URL="$1"
 
 # Install system packages
-apt-get update -qq && apt-get install -y smartmontools zfsutils-linux python3-pip python3-venv
+apt-get update -qq && apt-get install -y dmidecodesmartmontools zfsutils-linux python3-pip python3-venv
 
 # Copy agent files to install directory
 mkdir -p "$INSTALL_DIR"
