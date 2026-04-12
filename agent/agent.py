@@ -57,14 +57,11 @@ cache = {
 	'datasets'    : [],
 	'snapshots'   : [],
 	'io_rates'    : {},
-	'arc'         : None,
 	'pool_map'    : {},
-	'temps'       : {},
 	'system_info' : {},
 }
 
 _prev_diskstats = {}
-_prev_arcstats  = {}
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,8 +94,43 @@ def detect_capabilities():
 
 # ── System Info ──────────────────────────────────────────────────────────────
 
+def collect_dimm_info():
+	'''Collect DIMM slot details from dmidecode.'''
+
+	out, _, rc = run_cmd(['dmidecode', '-t', 'memory'])
+	if rc != 0:
+		return []
+	dimms = []
+	for block in out.split('Memory Device')[1:]:
+		d = {}
+		for line in block.splitlines():
+			line = line.strip()
+			if ':' not in line:
+				continue
+			key, val = line.split(':', 1)
+			d[key.strip()] = val.strip()
+		if not d:
+			continue
+		size_str = d.get('Size', '')
+		populated = bool(size_str) and 'No Module Installed' not in size_str
+		dimms.append({
+			'slot'         : d.get('Locator', ''),
+			'size'         : size_str if populated else '',
+			'type'         : d.get('Type', ''),
+			'speed'        : d.get('Speed', ''),
+			'configured_speed' : d.get('Configured Memory Speed', d.get('Configured Clock Speed', '')),
+			'manufacturer' : d.get('Manufacturer', ''),
+			'part_number'  : d.get('Part Number', '').strip(),
+			'serial'       : d.get('Serial Number', ''),
+			'form_factor'  : d.get('Form Factor', ''),
+			'rank'         : d.get('Rank', ''),
+			'populated'    : populated,
+		})
+	return dimms
+
+
 def collect_system_info():
-	'''Collect hostname, kernel, ZFS version, uptime, RAM, and CPU info from /proc and /sys.'''
+	'''Collect hostname, kernel, ZFS version, uptime, RAM, CPU, and DIMM info.'''
 
 	info = {
 		'hostname'       : capabilities['hostname'],
@@ -109,6 +141,7 @@ def collect_system_info():
 		'ram_available'  : 0,
 		'cpu_model'      : '',
 		'cpu_count'      : os.cpu_count() or 0,
+		'dimms'          : [],
 	}
 	out, _, rc = run_cmd(['uname', '-r'])
 	if rc == 0:
@@ -144,6 +177,7 @@ def collect_system_info():
 					break
 	except Exception:
 		pass
+	info['dimms'] = collect_dimm_info()
 	return info
 
 
@@ -184,40 +218,6 @@ def compute_health_score(disk: dict):
 
 
 # ── Fast Temperature ─────────────────────────────────────────────────────────
-
-def collect_temps_fast():
-	'''Read disk temperatures from /sys/block hwmon entries without shelling out.'''
-
-	temps = {}
-	try:
-		for name in os.listdir('/sys/block'):
-			if not re.match(r'^(sd[a-z]+|nvme\d+n\d+)$', name):
-				continue
-			for base in [Path(f'/sys/block/{name}/device/hwmon'), Path(f'/sys/block/{name}/device')]:
-				if not base.exists():
-					continue
-				found = False
-				try:
-					entries = sorted(base.iterdir())
-				except OSError:
-					continue
-				for item in entries:
-					if not item.name.startswith('hwmon'):
-						continue
-					tf = item / 'temp1_input'
-					if tf.exists():
-						try:
-							with open(tf) as f:
-								temps[name] = int(f.read().strip()) // 1000
-							found = True
-						except (ValueError, OSError):
-							pass
-					break
-				if found:
-					break
-	except OSError:
-		pass
-	return temps
 
 
 # ── Disk & SMART Collection ─────────────────────────────────────────────────
@@ -453,7 +453,7 @@ def parse_pool_status(text: str):
 					'read'  : parts[2] if len(parts) > 2 else '0',
 					'write' : parts[3] if len(parts) > 3 else '0',
 					'cksum' : parts[4] if len(parts) > 4 else '0',
-					'indent': len(line) - len(line.lstrip('\t')),
+					'indent': len(line) - len(line.lstrip()),
 				})
 	return ' '.join(scan_lines), vdevs, errors_summary
 
@@ -502,7 +502,7 @@ def collect_datasets_and_snapshots():
 	return datasets, snapshots
 
 
-# ── I/O & ARC Collection ────────────────────────────────────────────────────
+# ── I/O Collection ───────────────────────────────────────────────────────────
 
 def collect_iostat():
 	'''Read /proc/diskstats and compute per-disk I/O rates from deltas.'''
@@ -556,62 +556,6 @@ def collect_iostat():
 	return rates
 
 
-def collect_arc_stats():
-	'''Read /proc/spl/kstat/zfs/arcstats and compute ARC hit rates.'''
-
-	global _prev_arcstats
-	raw = {}
-	try:
-		with open('/proc/spl/kstat/zfs/arcstats') as f:
-			for line in f:
-				parts = line.split()
-				if len(parts) >= 3:
-					try:
-						raw[parts[0]] = int(parts[2])
-					except ValueError:
-						pass
-	except FileNotFoundError:
-		return None
-
-	if not raw:
-		return None
-
-	hits   = raw.get('hits', 0)
-	misses = raw.get('misses', 0)
-	total  = hits + misses
-	lifetime_rate = round(hits / total * 100, 2) if total > 0 else 0
-
-	if _prev_arcstats:
-		dh = hits - _prev_arcstats.get('hits', 0)
-		dm = misses - _prev_arcstats.get('misses', 0)
-		dt = dh + dm
-		hit_rate = round(dh / dt * 100, 2) if dt > 0 else lifetime_rate
-	else:
-		hit_rate = lifetime_rate
-
-	_prev_arcstats = {'hits': hits, 'misses': misses}
-
-	return {
-		'size'              : raw.get('size', 0),
-		'max_size'          : raw.get('c_max', 0),
-		'min_size'          : raw.get('c_min', 0),
-		'target_size'       : raw.get('c', 0),
-		'hits'              : hits,
-		'misses'            : misses,
-		'hit_rate'          : hit_rate,
-		'lifetime_hit_rate' : lifetime_rate,
-		'mru_size'          : raw.get('mru_size', 0),
-		'mfu_size'          : raw.get('mfu_size', 0),
-		'anon_size'         : raw.get('anon_size', 0),
-		'metadata_size'     : raw.get('arc_meta_used', 0),
-		'demand_hits'       : raw.get('demand_data_hits', 0) + raw.get('demand_metadata_hits', 0),
-		'prefetch_hits'     : raw.get('prefetch_data_hits', 0) + raw.get('prefetch_metadata_hits', 0),
-		'l2_hits'           : raw.get('l2_hits', 0),
-		'l2_misses'         : raw.get('l2_misses', 0),
-		'l2_size'           : raw.get('l2_size', 0),
-		'l2_asize'          : raw.get('l2_asize', 0),
-	}
-
 
 # ── Background Worker ────────────────────────────────────────────────────────
 
@@ -624,18 +568,10 @@ def background_worker():
 
 	while True:
 		try:
-			io_rates   = collect_iostat()
-			arc        = collect_arc_stats()
-			fast_temps = collect_temps_fast()
+			io_rates = collect_iostat()
 
 			with lock:
-				for d in cache.get('disks', []):
-					name = d.get('name', '')
-					if name not in fast_temps and d.get('temperature') is not None:
-						fast_temps[name] = d['temperature']
 				cache['io_rates'] = io_rates
-				cache['arc']      = arc
-				cache['temps']    = fast_temps
 
 			if tick % (POOL_INTERVAL // IO_INTERVAL) == 0:
 				pools     = collect_pools()
@@ -671,8 +607,7 @@ async def ws_sender(ws):
 	'''
 
 	with lock:
-		io_msg       = json.dumps({'type': 'io',        'ts': time.time(), 'rates': cache['io_rates'], 'pool_map': cache['pool_map'], 'temps': cache['temps']})
-		arc_msg      = json.dumps({'type': 'arc',       'ts': time.time(), 'arc': cache['arc']}) if cache['arc'] else None
+		io_msg       = json.dumps({'type': 'io',        'ts': time.time(), 'rates': cache['io_rates'], 'pool_map': cache['pool_map']})
 		pools_msg    = json.dumps({'type': 'pools',     'ts': time.time(), 'pools': cache['pools']})
 		datasets_msg = json.dumps({'type': 'datasets',  'ts': time.time(), 'datasets': cache['datasets']})
 		snaps_msg    = json.dumps({'type': 'snapshots', 'ts': time.time(), 'snapshots': cache['snapshots']})
@@ -685,8 +620,6 @@ async def ws_sender(ws):
 	await ws.send(snaps_msg)
 	await ws.send(disks_msg)
 	await ws.send(io_msg)
-	if arc_msg:
-		await ws.send(arc_msg)
 
 	tick = 0
 	while True:
@@ -694,13 +627,8 @@ async def ws_sender(ws):
 		tick += 1
 
 		with lock:
-			io_msg = json.dumps({'type': 'io', 'ts': time.time(), 'rates': cache['io_rates'], 'pool_map': cache['pool_map'], 'temps': cache['temps']})
+			io_msg = json.dumps({'type': 'io', 'ts': time.time(), 'rates': cache['io_rates'], 'pool_map': cache['pool_map']})
 		await ws.send(io_msg)
-
-		with lock:
-			arc = cache['arc']
-		if arc:
-			await ws.send(json.dumps({'type': 'arc', 'ts': time.time(), 'arc': arc}))
 
 		if tick % (POOL_INTERVAL // IO_INTERVAL) == 0:
 			with lock:

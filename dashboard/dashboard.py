@@ -66,9 +66,6 @@ class AgentState:
 		self.history         = {
 			'timestamps'   : deque(maxlen=HISTORY_SIZE),
 			'io'           : {},
-			'arc_size'     : deque(maxlen=HISTORY_SIZE),
-			'arc_hit_rate' : deque(maxlen=HISTORY_SIZE),
-			'temps'        : {},
 		}
 		self.alerts_active   = []
 		self.alert_log       = deque(maxlen=200)
@@ -266,20 +263,6 @@ def update_history(agent: 'AgentState', data: dict):
 			h['read_iops'].append(rates.get('read_iops', 0))
 			h['write_iops'].append(rates.get('write_iops', 0))
 
-		for dname, temp in data.get('temps', {}).items():
-			if dname not in agent.history['temps']:
-				agent.history['temps'][dname] = deque(maxlen=HISTORY_SIZE)
-			agent.history['temps'][dname].append(temp)
-
-		arc_msg = agent.current.get('arc', {})
-		arc = arc_msg.get('arc') if isinstance(arc_msg, dict) else None
-		if arc:
-			agent.history['arc_size'].append(arc.get('size', 0))
-			agent.history['arc_hit_rate'].append(arc.get('hit_rate', 0))
-
-	elif msg_type == 'arc':
-		pass
-
 
 def serialize_history(h: dict):
 	'''Convert history deques to plain lists for JSON serialization.
@@ -290,9 +273,6 @@ def serialize_history(h: dict):
 	return {
 		'timestamps'   : list(h['timestamps']),
 		'io'           : {dn: {k: list(v) for k, v in s.items()} for dn, s in h['io'].items()},
-		'arc_size'     : list(h['arc_size']),
-		'arc_hit_rate' : list(h['arc_hit_rate']),
-		'temps'        : {dn: list(v) for dn, v in h['temps'].items()},
 	}
 
 

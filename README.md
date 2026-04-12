@@ -90,7 +90,7 @@ sudo ./venv/bin/python agent.py ws://DASHBOARD_IP:8888/ws/agent
 
 Open the dashboard in a browser, click Settings. Enter your Gotify server URL and app token, hit Test, then Save. Alert thresholds for temperature, space usage, SMART failures, and pool health are all configured from the same panel.
 
-
+ws://10.0.0.34:8888/ws/agent
 ## What It Monitors
 
 - Fleet overview with all connected servers, health status, storage usage, alert counts
@@ -100,8 +100,6 @@ Open the dashboard in a browser, click Settings. Enter your Gotify server URL an
   - ZFS datasets *(used, available, referenced, compression ratio, quotas)*
   - Snapshots *(name, used, referenced, creation time)*
   - Live I/O charts *(per-disk throughput, IOPS, read/write latency, busy%)*
-  - ARC cache stats *(size, hit rate, MRU/MFU, L2ARC)*
-  - Temperature charts *(per-disk, live)*
-  - Disk details *(model, serial, firmware, capacity, RPM, protocol, health score 0-100, full SMART attributes, SAS error counters, grown defects)*
+  - Disk details *(model, serial, firmware, capacity, RPM, temperature, protocol, health score 0-100, full SMART attributes, SAS error counters, grown defects)*
   - SMART self-test triggering from the UI
   - Alerts pushed to Gotify with configurable cooldowns
