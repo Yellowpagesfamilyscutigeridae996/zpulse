@@ -247,7 +247,7 @@ def collect_smart(device: str):
 		'user_capacity'      : data.get('user_capacity', {}).get('bytes', 0),
 		'rotation_rate'      : data.get('rotation_rate', 0),
 		'form_factor'        : data.get('form_factor', {}).get('name', ''),
-		'protocol'           : data.get('device', {}).get('protocol', 'Unknown'),
+		'protocol'           : data.get('device', {}).get('protocol', '') or '',
 		'sata_version'       : data.get('sata_version', {}).get('string', ''),
 		'smart_attributes'   : [],
 		'sas_error_counters' : None,
@@ -273,6 +273,35 @@ def collect_smart(device: str):
 	if 'scsi_grown_defect_list' in data:
 		info['grown_defect_count'] = data['scsi_grown_defect_list']
 
+	return info
+
+
+def collect_udev_info(device: str):
+	'''
+	Query udevadm for device properties as a fallback when smartctl lacks data
+	(e.g. USB flash drives that aren't in smartctl's drivedb).
+
+	:param device: Block device path (e.g. /dev/sde)
+	'''
+
+	out, _, rc = run_cmd(['udevadm', 'info', '--query=property', f'--name={device}'], timeout=5)
+	if rc != 0:
+		return {}
+	props = {}
+	for line in out.splitlines():
+		if '=' in line:
+			k, v = line.split('=', 1)
+			props[k] = v
+	info = {}
+	vendor = (props.get('ID_VENDOR') or props.get('ID_USB_VENDOR') or '').replace('_', ' ').strip()
+	model  = (props.get('ID_MODEL')  or props.get('ID_USB_MODEL')  or '').replace('_', ' ').strip()
+	if vendor and model:
+		info['model_family'] = f'{vendor} {model}'
+	elif vendor:
+		info['model_family'] = vendor
+	bus = (props.get('ID_BUS') or '').lower()
+	if bus:
+		info['protocol'] = bus.upper()
 	return info
 
 
@@ -315,6 +344,14 @@ def collect_disks():
 					logging.warning('SMART failed for %s: %s', disk['name'], e)
 
 	for d in devs:
+		if not d.get('model_family') or not d.get('protocol'):
+			udev = collect_udev_info(d['path'])
+			if not d.get('model_family') and udev.get('model_family'):
+				d['model_family'] = udev['model_family']
+			if not d.get('protocol') and udev.get('protocol'):
+				d['protocol'] = udev['protocol']
+		if not d.get('protocol') and d.get('transport'):
+			d['protocol'] = d['transport'].upper()
 		d['health_score'] = compute_health_score(d)
 
 	with lock:
