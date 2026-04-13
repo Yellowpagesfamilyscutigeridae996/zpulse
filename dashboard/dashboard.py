@@ -289,11 +289,6 @@ def get_server_list():
 		pools = pools_msg.get('pools', []) if isinstance(pools_msg, dict) else []
 		sys_msg = a.current.get('system', {})
 		sys_info = sys_msg.get('info', {}) if isinstance(sys_msg, dict) else {}
-		try:
-			with open('/proc/uptime') as f:
-				pass
-		except Exception:
-			pass
 		out.append({
 			'hostname'       : hn,
 			'online'         : a.online,

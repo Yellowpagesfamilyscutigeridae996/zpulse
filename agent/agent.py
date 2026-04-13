@@ -16,7 +16,6 @@ import time
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime           import datetime
-from pathlib            import Path
 
 try:
 	import apv
@@ -99,6 +98,7 @@ def collect_dimm_info():
 
 	out, _, rc = run_cmd(['dmidecode', '-t', 'memory'])
 	if rc != 0:
+		logging.debug('dmidecode not available or failed (rc=%d)', rc)
 		return []
 	dimms = []
 	for block in out.split('Memory Device')[1:]:
@@ -126,12 +126,15 @@ def collect_dimm_info():
 			'rank'         : d.get('Rank', ''),
 			'populated'    : populated,
 		})
+	populated_count = sum(1 for d in dimms if d['populated'])
+	logging.info('Collected %d DIMM slots (%d populated)', len(dimms), populated_count)
 	return dimms
 
 
 def collect_system_info():
 	'''Collect hostname, kernel, ZFS version, uptime, RAM, CPU, and DIMM info.'''
 
+	logging.debug('Collecting system info...')
 	info = {
 		'hostname'       : capabilities['hostname'],
 		'kernel'         : '',
@@ -178,6 +181,7 @@ def collect_system_info():
 	except Exception:
 		pass
 	info['dimms'] = collect_dimm_info()
+	logging.debug('System info: kernel=%s, zfs=%s, cpu=%s', info['kernel'], info['zfs_version'] or 'N/A', info['cpu_model'][:40] or 'unknown')
 	return info
 
 
@@ -217,9 +221,6 @@ def compute_health_score(disk: dict):
 	return max(0, min(100, int(score)))
 
 
-# ── Fast Temperature ─────────────────────────────────────────────────────────
-
-
 # ── Disk & SMART Collection ─────────────────────────────────────────────────
 
 def collect_smart(device: str):
@@ -229,10 +230,12 @@ def collect_smart(device: str):
 	:param device: Block device path (e.g. /dev/sda)
 	'''
 
+	logging.debug('Running smartctl on %s', device)
 	out, _, _ = run_cmd(['smartctl', '-j', '-a', device], timeout=30)
 	try:
 		data = json.loads(out)
 	except (json.JSONDecodeError, ValueError):
+		logging.debug('smartctl returned no valid JSON for %s', device)
 		return {'smart_available': False}
 
 	info = {
@@ -308,8 +311,10 @@ def collect_udev_info(device: str):
 def collect_disks():
 	'''Enumerate physical disks via lsblk and collect SMART data in parallel.'''
 
+	logging.info('Collecting disk information...')
 	out, _, rc = run_cmd(['lsblk', '-d', '-b', '-o', 'NAME,SIZE,MODEL,SERIAL,ROTA,TRAN,TYPE', '-J'])
 	if rc != 0:
+		logging.warning('lsblk failed (rc=%d)', rc)
 		return []
 	try:
 		data = json.loads(out)
@@ -333,7 +338,10 @@ def collect_disks():
 			'pool'       : pool_map.get(name, ''),
 		})
 
+	logging.info('Found %d physical disk(s) via lsblk', len(devs))
+
 	if capabilities['smartctl'] and devs:
+		logging.info('Querying SMART data for %d disk(s)...', len(devs))
 		with ThreadPoolExecutor(max_workers=min(8, len(devs))) as executor:
 			futures = {executor.submit(collect_smart, d['path']): d for d in devs}
 			for future in as_completed(futures):
@@ -357,6 +365,8 @@ def collect_disks():
 	with lock:
 		cache['pool_map'] = pool_map
 
+	smart_count = sum(1 for d in devs if d.get('health') is not None)
+	logging.info('Disk collection complete: %d disk(s), %d with SMART data', len(devs), smart_count)
 	return devs
 
 
@@ -367,6 +377,7 @@ def collect_pool_mapping():
 
 	if not capabilities['zfs']:
 		return {}
+	logging.debug('Building pool-to-device mapping...')
 	mapping = {}
 	out, _, rc = run_cmd(['zpool', 'status', '-L'])
 	if rc != 0:
@@ -418,6 +429,7 @@ def collect_pools():
 
 	if not capabilities['zfs']:
 		return []
+	logging.info('Collecting ZFS pool data...')
 	out, _, rc = run_cmd(['zpool', 'list', '-Hp', '-o', 'name,size,alloc,free,frag,cap,dedup,health,ashift'])
 	if rc != 0:
 		return []
@@ -448,6 +460,7 @@ def collect_pools():
 			pool['scan'], pool['vdevs'], pool['errors_summary'] = parse_pool_status(s_out)
 			pool['scrub_age_days'] = parse_scrub_age(pool['scan'])
 		pools.append(pool)
+	logging.info('Collected %d ZFS pool(s)', len(pools))
 	return pools
 
 
@@ -500,6 +513,7 @@ def collect_datasets_and_snapshots():
 
 	if not capabilities['zfs']:
 		return [], []
+	logging.debug('Collecting ZFS datasets and snapshots...')
 	out, _, rc = run_cmd(['zfs', 'list', '-t', 'all', '-Hp', '-o', 'name,used,avail,refer,mountpoint,compression,compressratio,recordsize,type,quota,reservation,creation', '-s', 'creation'])
 	if rc != 0:
 		return [], []
@@ -536,6 +550,7 @@ def collect_datasets_and_snapshots():
 				'quota'         : int(p[9]) if len(p) > 9 and p[9] not in ('-', '0', 'none', '') else 0,
 				'reservation'   : int(p[10]) if len(p) > 10 and p[10] not in ('-', '0', 'none', '') else 0,
 			})
+	logging.info('Collected %d dataset(s), %d snapshot(s)', len(datasets), len(snapshots))
 	return datasets, snapshots
 
 
@@ -593,12 +608,12 @@ def collect_iostat():
 	return rates
 
 
-
 # ── Background Worker ────────────────────────────────────────────────────────
 
 def background_worker():
 	'''Collect all monitoring data on timed intervals and update the shared cache.'''
 
+	logging.info('Background worker started (IO every %ds, pools every %ds, SMART every %ds)', IO_INTERVAL, POOL_INTERVAL, SMART_INTERVAL)
 	tick = 0
 	collect_iostat()
 	time.sleep(1)
@@ -626,6 +641,7 @@ def background_worker():
 					cache['disks'] = disks
 
 			if not init_done.is_set():
+				logging.info('Initial data collection complete')
 				init_done.set()
 
 			tick += 1
@@ -643,6 +659,7 @@ async def ws_sender(ws):
 	:param ws: Active WebSocket connection to the dashboard
 	'''
 
+	logging.info('Sending initial data burst to dashboard...')
 	with lock:
 		io_msg       = json.dumps({'type': 'io',        'ts': time.time(), 'rates': cache['io_rates'], 'pool_map': cache['pool_map']})
 		pools_msg    = json.dumps({'type': 'pools',     'ts': time.time(), 'pools': cache['pools']})
@@ -657,6 +674,7 @@ async def ws_sender(ws):
 	await ws.send(snaps_msg)
 	await ws.send(disks_msg)
 	await ws.send(io_msg)
+	logging.info('Initial burst sent (system, pools, datasets, snapshots, disks, io)')
 
 	tick = 0
 	while True:
@@ -697,14 +715,17 @@ async def ws_receiver(ws):
 		except json.JSONDecodeError:
 			continue
 		cmd = data.get('type')
+		logging.debug('Received command: %s', cmd)
 		if cmd == 'smarttest':
 			device    = data.get('device', '')
 			test_type = data.get('test_type', 'short')
+			logging.info('SMART self-test requested: %s on %s', test_type, device)
 			if test_type not in ('short', 'long', 'conveyance'):
 				continue
 			if not re.match(r'^/dev/(sd[a-z]+|nvme\d+n\d+|da\d+)$', device):
 				continue
 			out, err, rc = await asyncio.to_thread(run_cmd, ['smartctl', '-t', test_type, device])
+			logging.info('SMART test %s on %s: %s', test_type, device, 'started' if rc == 0 else 'failed')
 			await ws.send(json.dumps({
 				'type': 'smarttest_result', 'device': device,
 				'test_type': test_type, 'success': rc == 0,
@@ -735,16 +756,31 @@ async def ws_main(dashboard_url: str):
 
 
 
+def parse_dashboard_target(target: str) -> str:
+	'''
+	Convert a user-provided dashboard target into a full WebSocket URL.
+	Accepts "ip:port", "ip port", or a full ws:// URL.
+
+	:param target: Dashboard target string
+	'''
+
+	target = target.strip()
+	if target.startswith('ws://') or target.startswith('wss://'):
+		return target
+	target = target.replace(' ', ':')
+	if ':' not in target:
+		target += ':8888'
+	return f'ws://{target}/ws/agent'
+
+
 if __name__ == '__main__':
-	# Parse command line arguments
 	parser = argparse.ArgumentParser()
-	parser.add_argument('dashboard_url', help='Dashboard WebSocket URL (e.g. ws://10.0.0.50:8888/ws/agent)')
+	parser.add_argument('dashboard', help='Dashboard address (e.g. 10.0.0.50:8888 or "10.0.0.50 8888")')
 	parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging')
 	args = parser.parse_args()
 
-	# Setup logging
 	if args.debug:
-		apv.setup_logging(level='DEBUG', log_to_disk=True, max_log_size=5*1024*1024, max_backups=5, compress_backups=True, log_file_name='havoc', show_details=True)
+		apv.setup_logging(level='DEBUG', log_to_disk=True, max_log_size=5*1024*1024, max_backups=5, compress_backups=True, log_file_name='zpulse-agent', show_details=True)
 		logging.debug('Debug logging enabled')
 	else:
 		apv.setup_logging(level='INFO')
@@ -754,13 +790,15 @@ if __name__ == '__main__':
 	if os.geteuid() != 0:
 		raise RuntimeError('This program must be ran as root')
 
+	dashboard_url = parse_dashboard_target(args.dashboard)
+
 	logging.info('ZPulse Agent starting — host: %s', capabilities['hostname'])
 	logging.info('  smartctl:  %s', 'available' if capabilities['smartctl'] else 'NOT FOUND')
 	logging.info('  zfs:       %s', 'available' if capabilities['zfs']      else 'NOT FOUND')
-	logging.info('  dashboard: %s', args.dashboard_url)
+	logging.info('  dashboard: %s', dashboard_url)
 
 	worker = threading.Thread(target=background_worker, daemon=True)
 	worker.start()
 	init_done.wait(timeout=120)
 
-	asyncio.run(ws_main(args.dashboard_url))
+	asyncio.run(ws_main(dashboard_url))

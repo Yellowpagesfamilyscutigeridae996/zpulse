@@ -70,7 +70,7 @@ python3 dashboard.py
 Installs to `/opt/zpulse-agent`. Must run as root for SMART data & ZFS access.
 
 ```bash
-sudo ./agent/setup.sh ws://DASHBOARD_IP:8888/ws/agent
+sudo ./agent/setup.sh DASHBOARD_IP:8888
 ```
 
 This installs `smartmontools` and `zfsutils-linux`, creates a venv, and sets up a systemd service that auto-starts and reconnects.
@@ -82,7 +82,7 @@ cd agent
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-sudo ./venv/bin/python agent.py ws://DASHBOARD_IP:8888/ws/agent
+sudo ./venv/bin/python agent.py DASHBOARD_IP:8888
 ```
 
 
@@ -90,7 +90,6 @@ sudo ./venv/bin/python agent.py ws://DASHBOARD_IP:8888/ws/agent
 
 Open the dashboard in a browser, click Settings. Enter your Gotify server URL and app token, hit Test, then Save. Alert thresholds for temperature, space usage, SMART failures, and pool health are all configured from the same panel.
 
-ws://10.0.0.34:8888/ws/agent
 ## What It Monitors
 
 - Fleet overview with all connected servers, health status, storage usage, alert counts

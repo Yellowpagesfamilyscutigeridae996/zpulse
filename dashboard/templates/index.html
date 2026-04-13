@@ -115,7 +115,7 @@ section{margin-bottom:1.5rem}
 .st .attr-warn{color:var(--yellow)}.st .attr-crit{color:var(--red);font-weight:600}.st .attr-note{color:var(--text2);font-style:italic;font-size:.62rem}
 .empty{text-align:center;padding:1.25rem;color:var(--text2);font-size:.82rem}
 .tc{color:var(--green)}.tw{color:var(--yellow)}.th{color:var(--red)}
-@media(max-width:1024px){.g5{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}.pool-stats{grid-template-columns:repeat(3,1fr)}.disk-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1024px){.g5{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}.pool-stats{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:640px){nav .nav-links{display:none}main{padding:.75rem}.g5,.g4,.g3{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -210,7 +210,6 @@ const scoreLabel=s=>{if(typeof s!=='number')return'';return s>=90?'Excellent':s>
 const relTime=ts=>{const s=Math.floor(Date.now()/1000-ts);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'};
 const fmtUptime=sec=>{if(!sec)return'';const d=Math.floor(sec/86400),h=Math.floor((sec%86400)/3600);return d>0?d+'d '+h+'h':h+'h '+Math.floor((sec%3600)/60)+'m'};
 const SEAGATE=new Set([1,7,195]);
-const DISK_COLORS=['#3b82f6','#f97316','#22c55e','#a855f7','#06b6d4','#ef4444','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#84cc16'];
 
 let ws=null, selectedServer=null, servers=[], settingsData={};
 const state={disks:[],pools:[],datasets:[],snapshots:[],ioRates:{},poolMap:{},systemInfo:{},alertsActive:[],alertLog:[]};
@@ -301,9 +300,6 @@ function renderRAM(si){
         return`<tr><td>${d.slot}</td><td>${d.size}</td><td>${d.type}</td><td>${d.configured_speed||d.speed}</td><td>${d.manufacturer}</td><td style="font-family:var(--mono);font-size:.68rem">${d.part_number}</td><td style="font-family:var(--mono);font-size:.68rem">${d.serial}</td><td>${d.form_factor}</td><td>${d.rank||'—'}</td></tr>`;
     }).join('');
 }
-
-function renderOverviewFromState(){}
-
 
 const _expanded={pools:new Set(),disks:new Set(),datasets:new Set()};
 function togglePool(el){const h=el,b=el.nextElementSibling;h.classList.toggle('open');b.classList.toggle('open');const name=h.querySelector('.pool-name')?.textContent;if(name){if(h.classList.contains('open'))_expanded.pools.add(name);else _expanded.pools.delete(name)}}
@@ -512,19 +508,19 @@ function handleMessage(msg){
             }
             break;
         case 'pools':
-            if(msg.hostname===selectedServer){state.pools=msg.pools||[];renderPools(state.pools);renderOverviewFromState()}
+            if(msg.hostname===selectedServer){state.pools=msg.pools||[];renderPools(state.pools)}
             break;
         case 'disks':
-            if(msg.hostname===selectedServer){state.disks=msg.disks||[];renderDisks(state.disks);renderOverviewFromState()}
+            if(msg.hostname===selectedServer){state.disks=msg.disks||[];renderDisks(state.disks)}
             break;
         case 'datasets':
-            if(msg.hostname===selectedServer){state.datasets=msg.datasets||[];renderDatasets(state.datasets);renderOverviewFromState()}
+            if(msg.hostname===selectedServer){state.datasets=msg.datasets||[];renderDatasets(state.datasets)}
             break;
         case 'snapshots':
             if(msg.hostname===selectedServer){state.snapshots=msg.snapshots||[];renderSnapshots(state.snapshots)}
             break;
         case 'system':
-            if(msg.hostname===selectedServer){state.systemInfo=msg.info||{};renderOverviewFromState();renderRAM(state.systemInfo)}
+            if(msg.hostname===selectedServer){state.systemInfo=msg.info||{};renderRAM(state.systemInfo)}
             break;
         case 'alerts':
             if(msg.hostname===selectedServer)renderAlerts({active:msg.active||[],log:msg.log||[]});
@@ -547,7 +543,6 @@ function loadFullState(msg){
     if(c.snapshots&&c.snapshots.snapshots){state.snapshots=c.snapshots.snapshots;renderSnapshots(state.snapshots)}
     if(c.io&&c.io.rates){state.ioRates=c.io.rates;state.poolMap=c.io.pool_map||{};renderIOStats(c.io.rates,c.io.pool_map||{})}
     if(c.system&&c.system.info)state.systemInfo=c.system.info;
-    renderOverviewFromState();
     renderRAM(state.systemInfo);
     if(h&&h.timestamps&&h.timestamps.length)loadHist(h);
     if(msg.alerts)renderAlerts(msg.alerts);

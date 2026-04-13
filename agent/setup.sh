@@ -10,14 +10,14 @@ INSTALL_DIR="/opt/zpulse-agent"
 SERVICE_NAME="zpulse-agent"
 
 # Check if running as root & an argument is provided
-[ "$(id -u)" -ne 0 ] && { echo "Run as root: sudo $0 <dashboard_url>";           exit 1; }
-[ -z "$1"          ] && { echo "Usage: sudo $0 ws://DASHBOARD_IP:8888/ws/agent"; exit 1; }
+[ "$(id -u)" -ne 0 ] && { echo "Run as root: sudo $0 <ip:port>"; exit 1; }
+[ -z "$1"          ] && { echo "Usage: sudo $0 10.0.0.50:8888";  exit 1; }
 
-# Set the dashboard URL
-DASHBOARD_URL="$1"
+# Set the dashboard address
+DASHBOARD_ADDR="$1"
 
 # Install system packages
-apt-get update -qq && apt-get install -y dmidecodesmartmontools zfsutils-linux python3-pip python3-venv
+apt-get update -qq && apt-get install -y dmidecode smartmontools zfsutils-linux python3-pip python3-venv
 
 # Copy agent files to install directory
 mkdir -p "$INSTALL_DIR"
@@ -37,7 +37,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/agent.py $DASHBOARD_URL
+ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/agent.py $DASHBOARD_ADDR
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
